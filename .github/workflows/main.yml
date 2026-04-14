@@ -1,4 +1,4 @@
-name: Find Masked Variable
+name: Entrypoint Injection Test
 on: [push]
 jobs:
   test:
@@ -6,9 +6,16 @@ jobs:
     services:
       myservice:
         image: alpine:latest
-        options: --entrypoint sh
+        entrypoint: ["sh", "-c"]
+        command: ["echo 'INJECTED' && env && sleep 30"]
     steps:
-      - name: Print Variable Names
+      - name: Check Service Output
         run: |
-          echo "=== CHECKING SENSITIVE VARS ==="
-          printenv | cut -d= -f1 | sort
+          echo "=== CHECKING SERVICE CONTAINER ==="
+          docker ps -a
+          echo "=== SERVICE LOGS ==="
+          docker logs $(docker ps -aq --filter "ancestor=alpine:latest") 2>&1 || true
+          echo "=== NETWORK INFO ==="
+          cat /etc/hosts
+          echo "=== CHECKING SERVICE ENV ==="
+          docker exec $(docker ps -q --filter "ancestor=alpine:latest") env 2>&1 || true
