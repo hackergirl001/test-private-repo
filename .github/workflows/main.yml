@@ -1,4 +1,4 @@
-name: Service Container Test
+name: Find Masked Variable
 on: [push]
 jobs:
   test:
@@ -8,8 +8,7 @@ jobs:
         image: alpine:latest
         options: --entrypoint sh
     steps:
-      - name: Test Service Container
+      - name: Print Variable Names
         run: |
-          echo "Main job running"
-          echo "Service: ${{ job.services.myservice.id }}"
-          env
+          echo "=== CHECKING SENSITIVE VARS ==="
+          printenv | cut -d= -f1 | sort
