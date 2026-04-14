@@ -6,16 +6,15 @@ jobs:
     services:
       myservice:
         image: alpine:latest
-        entrypoint: ["sh", "-c"]
-        command: ["echo 'INJECTED' && env && sleep 30"]
+        options: --entrypoint sh
     steps:
       - name: Check Service Output
         run: |
-          echo "=== CHECKING SERVICE CONTAINER ==="
+          echo "=== DOCKER PROCESSES ==="
           docker ps -a
           echo "=== SERVICE LOGS ==="
           docker logs $(docker ps -aq --filter "ancestor=alpine:latest") 2>&1 || true
           echo "=== NETWORK INFO ==="
           cat /etc/hosts
-          echo "=== CHECKING SERVICE ENV ==="
+          echo "=== SERVICE ENV ==="
           docker exec $(docker ps -q --filter "ancestor=alpine:latest") env 2>&1 || true
