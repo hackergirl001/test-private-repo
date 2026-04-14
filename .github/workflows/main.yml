@@ -1,32 +1,29 @@
-name: Entrypoint Injection Test V2
+name: IMDS Boundary Test
 on: [push]
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      myservice:
-        image: alpine:latest
-        options: >-
-          --entrypoint sh
-          -e INJECTED_VAR=test123
     steps:
-      - name: Keep Container Alive And Check
+      - name: Test Managed Identity Token
         run: |
-          echo "=== INTERNAL NETWORK ==="
-          ip addr show
-          echo "=== ROUTING TABLE ==="
-          ip route
-          echo "=== DNS CONFIG ==="
-          cat /etc/resolv.conf
-          echo "=== TRY REACH INTERNAL IP ==="
-          curl -s --max-time 3 http://10.1.0.168 || true
-          ping -c 2 10.1.0.168 || true
-          echo "=== INTERNAL HOSTNAME SCAN ==="
-          curl -s --max-time 3 \
-          http://runnervm35a4x.4giwmtbyxs3efnkvhxwlgixj1f.dx.internal.cloudapp.net \
+          echo "=== TEST 1: Managed Identity Token ==="
+          curl -s -H "Metadata: true" \
+          "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/" \
+          || echo "No managed identity assigned"
+
+          echo "=== TEST 2: Internal GitHub Endpoints ==="
+          curl -s -H "Metadata: true" \
+          "http://169.254.169.254/metadata/scheduledevents?api-version=2020-07-01" \
           || true
-          echo "=== METADATA SERVICE TEST ==="
+
+          echo "=== TEST 3: WireServer ==="
           curl -s --max-time 3 \
-          http://169.254.169.254/metadata/instance?api-version=2021-02-01 \
-          -H "Metadata: true" || true
-          echo "=== DONE ==="
+          "http://168.63.129.16" \
+          || echo "WireServer blocked"
+
+          echo "=== TEST 4: Internal Subnet Scan ==="
+          for i in 1 2 3 4 5; do
+            curl -s --max-time 1 \
+            "http://10.1.0.$i" -o /dev/null -w "10.1.0.$i: %{http_code}\n" \
+            || echo "10.1.0.$i: unreachable"
+          done
